@@ -4,7 +4,6 @@ import logging.handlers
 import os
 import sys
 from collections import namedtuple
-from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -98,33 +97,34 @@ def setup_logger(loglevel='info'):
 
 
 def get_cloudflare_ips(url, ssl_verify):
-    try:
-        response = requests.get(
-            url=url,
-            verify=ssl_verify)
+    response = requests.get(
+        url=url,
+        timeout=2,
+        verify=ssl_verify)
 
-        if not response.ok:
-            raise HTTPError(f"{response.status_code}: canont get IPv4 address from Cloudflare")
+    if not response.ok:
+        raise HTTPError(f"{response.status_code}: canont get IPv4 address from Cloudflare")
 
-        return [r for r in response.text.split("\n") if r]
-    except:
-        raise
+    return [r for r in response.text.split("\n") if r]
+
 
 
 def process_networkpolicy(networkpolicy_file_path, cloudflare_ips):
+    if not os.path.exists(networkpolicy_file_path):
+        raise FileNotFoundError(f"cannot open file '{networkpolicy_file_path}'. {e}")
+
     try:
         with open(networkpolicy_file_path, 'r') as conf:
             networkpolicy = yaml.safe_load(conf)
     except Exception as e:
-        raise FileNotFoundError(f"cannot open file '{networkpolicy_file_path}'. {e}")
+        raise Exception(f"dannot open file '{networkpolicy_file_path}'. {e}")
 
     if not networkpolicy.get('spec'):
         raise KeyError(f"'spec' not found in '{networkpolicy_file_path}'")
 
-    if not networkpolicy['spec'].get('nets'):
-        raise KeyError(f"'nets' not found in '{networkpolicy_file_path}'")
-
     networkpolicy_ips = networkpolicy['spec'].get('nets')
+    if not networkpolicy_ips:
+        raise KeyError(f"'nets' not found in '{networkpolicy_file_path}'")
 
     if not Diff(cloudflare_ips, networkpolicy_ips):
         logging.info("IPv4 addresses are equal. nothing to do")
@@ -136,72 +136,59 @@ def process_networkpolicy(networkpolicy_file_path, cloudflare_ips):
 
 
 def update_file(branch_name, commit_msg, networkpolicy, networkpolicy_file_path):
-    try:
-        payload = {
-            "branch": branch_name,
-            "commit_message": commit_msg,
-            "actions": [
-                {
-                    'action': 'update',
-                    'file_path': networkpolicy_file_path,
-                    'content': yaml.dump(networkpolicy),
-                }
-            ]
-        }
+    content = yaml.dump(networkpolicy)
+    payload = {
+        "branch": branch_name,
+        "commit_message": commit_msg,
+        "actions": [
+            {
+                'action': 'update',
+                'file_path': networkpolicy_file_path,
+                'content': content,
+            }
+        ]
+    }
 
-        project.commits.create(payload)
-        logging.info(f"successfully update file '{networkpolicy_file_path}'")
-    except Exception as e:
-        raise Exception(e.error_message)
+    project.commits.create(payload)
+    logging.info(f"successfully update file '{networkpolicy_file_path}'")
 
 
 def create_branch(branch_name):
-    try:
-        branch = project.branches.get(branch_name)
-        if branch:
-            logging.debug(f"branch '{branch_name}' already exists")
-            return
-    except Exception as e:
-        if not e.response_code == 404:
-            logging.debug(f"cannot get '{branch_name}'. {e}")
-            return
+    branch = project.branches.get("branch_name")
+    if branch:
+        logging.debug(f"branch '{branch_name}' already exists")
+        return
 
-    try:
-        project.branches.create({'branch': branch_name,
-                                  'ref': 'master'})
-        logging.info(f"successfully created branch '{branch_name}'")
-    except Exception as e:
-        raise Exception(e.error_message)
+    project.branches.create(
+        {
+            'branch': branch_name,
+            'ref': 'master'
+        })
+    logging.info(f"successfully created branch '{branch_name}'")
 
 
 def create_merge_request(branch_name, title):
-    try:
-        mrs = project.mergerequests.list(state='opened', order_by='updated_at')
-        for mr in mrs:
-            if mr.title != title:
-                continue
-            logging.debug(f"merge request '{title}' already exists")
-            return
-    except Exception as e:
-        logging.debug(f"cannot get '{branch_name}'. {e}")
+    mrs = project.mergerequests.list(
+        state='opened',
+        order_by='updated_at')
+
+    for mr in mrs:
+        if mr.title != title:
+            continue
+        logging.debug(f"merge request '{title}' already exists")
         return
 
-    try:
-        project.mergerequests.create(
-            {
-                'source_branch': branch_name,
-                'target_branch': 'master',
-                'title': title,
-            })
-        logging.info(f"successfully created merge request '{title}'")
-    except Exception as e:
-        raise Exception(f"{e.error_message}")
+    project.mergerequests.create(
+        {
+            'source_branch': branch_name,
+            'target_branch': 'master',
+            'title': title,
+        })
+    logging.info(f"successfully created merge request '{title}'")
 
 
 def main():
     try:
-        now = datetime.today().isoformat()
-        sys.stdout.write(f"{now} [INFO   ] start Calico networkpolicy with CloudFlare IPv4 sync: {__version__}\n")
         env_vars = check_env_vars()
     except Exception as e:
         sys.stderr.write(f"{str(e)}\n")
@@ -241,8 +228,11 @@ def main():
     try:
         global project
         project = cli.projects.get(int(env_vars.project_id))
+    except gitlab.exceptions.GitlabGetError:
+        logging.critical(f"project '{env_vars.project_id}' not found")
+        sys.exit(1)
     except Exception as e:
-        logging.critical(f"cannot get project '{env_vars.project_id}'. {e}")
+        logging.critical(f"unable to connect to gitlab. {str(e)}")
         sys.exit(1)
 
     filename = Path(env_vars.networkpolicy_file_path).name
@@ -281,7 +271,7 @@ def main():
 
 
 def Diff(list1, list2):
-    return (list(list(set(list1)-set(list2)) + list(set(list2)-set(list1)))) 
+    return (list(list(set(list1)-set(list2)) + list(set(list2)-set(list1))))
 
 
 if __name__ == "__main__":
