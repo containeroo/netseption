@@ -1,0 +1,4 @@
+networkpolicies/
+env/
+venv/
+.vscode
