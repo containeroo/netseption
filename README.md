@@ -2,23 +2,23 @@
 
 ## Introduction
 
-NetSeption syncs the IPv4 addresses from `https://www.cloudflare.com/ips-v4` with a [calico networkset](https://docs.projectcalico.org/reference/resources/networkset).  
+NetSeption syncs the IPv4 addresses from `https://www.cloudflare.com/ips-v4` with a content of a yaml. The path to the values you must provide with the variable `YAML_PATH`.  
 If there is a difference and the environment variable `BRANCH` is set, the script creates a branch and pushes the updated file. If no branch is set, it pushes directly to the `master` branch.
 
 ## Requirements
 
-- [calico networkset](https://docs.projectcalico.org/reference/resources/networkset)
 - GitLab
 
 ## Configration
 
-In our [repository](https://github.com/containeroo/kubernetes-networkpolicies-examples/blob/master/traefik/networkset-cloudflare.yaml) you can find an calico networkset example.
+In our [repository](https://github.com/containeroo/kubernetes-networkpolicies-examples/blob/master/traefik/networkset-cloudflare.yaml) you can find y yaml example.
 
 NetSeption takes the following environment variables:
 
 | Variable             | Description                                                       | Example                                                |
 | :------------------- | :---------------------------------------------------------------- | :----------------------------------------------------- |
-| `NETWORKPOLICY_FILE` | path to networkpolicy file                                        | `networkpolicies/cloudflare-networkpolicy.yaml`        |
+| `FILE_FILE`          | path to networkset file                                           | `networkpolicies/cloudflare-networkset.yaml`           |
+| `YAML_PATH`          | path to get network values                                        | `spec.nets`                                            |
 | `GITLAB_TOKEN`       | token for authentication                                          | `vTbFeqJYCY3sibBP7BZM`                                 |
 | `GITLAB_URL`         | gitlab url                                                        | `https://gitlab.example.com`                           |
 | `PROJECT_ID`         | id of project                                                     | `123`                                                  |
@@ -33,7 +33,7 @@ NetSeption takes the following environment variables:
 If you want to use NetSeption in a GitLab CI / CD job, you can use the follwing `.gitlab-ci.yml` as an example:
 
 ```yaml
-image: 
+image:
   name: containeroo/netseption:latest
   entrypoint: [""]
 
