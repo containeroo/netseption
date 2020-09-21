@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import logging.handlers
@@ -254,6 +255,17 @@ def update_file(project: object,
     if not isinstance(project, gitlab.v4.objects.Project):
         raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
 
+    commited_file = project.files.get(file_path=path_to_file, ref=branch_name)
+
+    base64_message = commited_file.content
+    base64_bytes = base64_message.encode('ascii')
+    message_bytes = base64.b64decode(base64_bytes)
+    commit_conntent = message_bytes.decode('ascii')
+
+    if content == commit_conntent:
+        logging.debug("last commit is current")
+        return
+
     payload = {
         "branch": branch_name,
         "commit_message": commit_msg,
@@ -326,12 +338,13 @@ def create_merge_request(project: object, title: str, branch_name: str = 'master
         logging.debug(f"merge request '{title}' already exists")
         return
 
-    project.mergerequests.create(
+    mr = project.mergerequests.create(
         {
             'source_branch': branch_name,
             'target_branch': 'master',
             'title': title,
         })
+    mr.todo()
     logging.info(f"successfully created merge request '{title}'")
 
 
