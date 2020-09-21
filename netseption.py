@@ -300,7 +300,7 @@ def create_branch(project: object, branch_name: str = 'master'):
     branch = None
     try:
         branch = project.branches.get(branch_name)
-    except gitlab.exceptions.GitlabGetError as e:
+    except gitlab.exceptions.GitlabGetError:
         logging.debug(f"branch '{branch_name}' not found")
     except:
         raise
