@@ -8,6 +8,7 @@ If there is a difference and the environment variable `BRANCH` is set, the scrip
 ## Requirements
 
 - GitLab
+- Python 3.7.3
 
 ## Configration
 
