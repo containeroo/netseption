@@ -255,7 +255,9 @@ def update_file(project: object,
     if not isinstance(project, gitlab.v4.objects.Project):
         raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
 
-    commited_file = project.files.get(file_path=path_to_file, ref=branch_name)
+    commited_file = project.files.get(
+        file_path=path_to_file,
+        ref=branch_name)
 
     base64_message = commited_file.content
     base64_bytes = base64_message.encode('ascii')
@@ -263,7 +265,7 @@ def update_file(project: object,
     commit_conntent = message_bytes.decode('ascii')
 
     if content == commit_conntent:
-        logging.debug("last commit is current")
+        logging.debug("current commit is up to date")
         return
 
     payload = {
