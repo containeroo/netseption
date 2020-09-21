@@ -87,7 +87,7 @@ def setup_logger(loglevel='info'):
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
-    
+
     loglevel = loglevel.lower()
 
     if loglevel == "critical":
