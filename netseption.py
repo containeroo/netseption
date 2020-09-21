@@ -175,7 +175,7 @@ def update_value(dict_: dict, path: str, value: object = None) -> dict:
     Args:
         dict_ (dict): dict to be updated
         path (str): path with keys, separated with a dot (a.b.c)
-        value (object, optional): [description]. Defaults to None.
+        value (object, optional): value to set. Defaults to None.
 
     Raises:
         TypeError: dict_ object is not a dict
@@ -283,7 +283,13 @@ def create_branch(project: object, branch_name: str = 'master'):
     if not isinstance(project, gitlab.v4.objects.Project):
         raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
 
-    branch = project.branches.get("branch_name")
+    branch = None
+    try:
+        branch = project.branches.get(branch_name)
+    except gitlab.exceptions.GitlabGetError as e:
+        logging.debug(f"branch '{branch_name}' not found")
+    except:
+        raise
     if branch:
         logging.debug(f"branch '{branch_name}' already exists")
         return
