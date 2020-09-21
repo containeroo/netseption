@@ -17,7 +17,9 @@ CLOUDFLARE_IPV_URL = "https://www.cloudflare.com/ips-v4"
 
 __version__ = "0.0.1"
 
+
 def check_env_vars():
+    """get variables from env"""
     file_path = os.environ.get("FILE_PATH")
     yaml_path = os.environ.get("YAML_PATH")
 
@@ -78,6 +80,7 @@ def check_env_vars():
     )
 
 def setup_logger(loglevel='info'):
+    """setup logger"""
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     urllib3.disable_warnings()
 
@@ -135,7 +138,7 @@ def Diff(list1, list2):
 
 
 def get_value(dict_: dict, path: str) -> object:
-    """get a value from a dict, key passed as dotted path (a.b.c)
+"""get a value from a dict, key passed as dotted path (a.b.c)
 
     Args:
         dict_ (dict): dict to be search
@@ -161,13 +164,13 @@ def get_value(dict_: dict, path: str) -> object:
     return value
 
 
-def update_value(dict_: dict, path: str, value: object) -> dict:
+def update_value(dict_: dict, path: str, value: object = None) -> dict:
     """update a value from a dict, key passed as dotted path (a.b.c)
 
     Args:
         dict_ (dict): dict to be updated
         path (str): path with keys, separated with a dot (a.b.c)
-        value (object): any object you want to put as new value
+        value (object, optional): [description]. Defaults to None.
 
     Raises:
         TypeError: dict_ object is not a dict
@@ -210,11 +213,11 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_nets: list) -> dict:
     except Exception as e:
         raise ValueError(f"cannot open file '{file_path}'. {e}")
 
-    nets = get_value(
+    current_nets = get_value(
         dict_=yaml_content,
         path=yaml_path)
 
-    if not Diff(cloudflare_nets, nets):
+    if not Diff(cloudflare_nets, current_nets):
         logging.info("IPv4 nets are equal. nothing to do")
         sys.exit(0)
 
@@ -348,7 +351,6 @@ def main():
             yaml_path=env_vars.yaml_path,
             cloudflare_nets=cloudflare_nets)
         new_content = yaml.dump(content)
-
     except Exception as e:
         logging.critical(f"unable to process yaml. {str(e)}")
         sys.exit(1)
