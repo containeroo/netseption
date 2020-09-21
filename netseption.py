@@ -13,7 +13,7 @@ import urllib3
 import yaml
 from requests import HTTPError
 
-CLOUDFLARE_IPV_URL = "https://www.cloudflare.com/ips-v4"
+CLOUDFLARE_IPV4_URL = "https://www.cloudflare.com/ips-v4"
 
 __version__ = "0.0.1"
 
@@ -121,7 +121,7 @@ def get_cloudflare_nets(url: str, ssl_verify: bool, timeout: int = 2) -> list:
         HTTPError: CloudFlare response is not ok
 
     Returns:
-        [type]: list with CloudFlare IPv4 ranges
+        list: list with CloudFlare IPv4 ranges
     """
     response = requests.get(
         url=url,
@@ -211,8 +211,8 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_nets: list) -> dict:
         raise FileNotFoundError(f"cannot open file '{file_path}'")
 
     try:
-        with open(file_path, 'r') as conf:
-            yaml_content = yaml.safe_load(conf)
+        with open(file_path, 'r') as data:
+            yaml_content = yaml.safe_load(data)
     except Exception as e:
         raise ValueError(f"cannot open file '{file_path}'. {e}")
 
@@ -221,7 +221,7 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_nets: list) -> dict:
         path=yaml_path)
 
     if not Diff(cloudflare_nets, current_nets):
-        logging.info("IPv4 nets are equal. nothing to do")
+        logging.info("IPv4 ranges are equal. nothing to do")
         sys.exit(0)
 
     new_content = update_value(
@@ -276,7 +276,7 @@ def create_branch(project: object, branch_name: str = 'master'):
         branch_name (str, optional): [description]. Defaults to 'master'.
 
     Raises:
-        TypeError: project variable is not a type 'gitlab.v4.objects.Project'
+        TypeError: project variable is not of type 'gitlab.v4.objects.Project'
     """
     if not isinstance(project, gitlab.v4.objects.Project):
         raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
@@ -303,7 +303,7 @@ def create_merge_request(project: object, title: str, branch_name: str = 'master
         branch_name (str, optional): [description]. Defaults to 'master'.
 
     Raises:
-        TypeError: project variable is not a type 'gitlab.v4.objects.Project'
+        TypeError: project variable is not of type 'gitlab.v4.objects.Project'
     """
     if not isinstance(project, gitlab.v4.objects.Project):
         raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
@@ -342,7 +342,7 @@ def main():
 
     try:
         cloudflare_nets = get_cloudflare_nets(
-            url=CLOUDFLARE_IPV_URL,
+            url=CLOUDFLARE_IPV4_URL,
             ssl_verify=env_vars.ssl_verify)
     except Exception as e:
         logging.critical(f"unable to process ansible yaml. {str(e)}")
