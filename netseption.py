@@ -79,6 +79,7 @@ def check_env_vars():
         ssl_verify
     )
 
+
 def setup_logger(loglevel='info'):
     """setup logger"""
     logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -100,7 +101,8 @@ def setup_logger(loglevel='info'):
     else:
         loglevel = logging.INFO
 
-    default_format = logging.Formatter("%(asctime)s [%(levelname)-7.7s] %(message)s")
+    default_format = logging.Formatter(
+        "%(asctime)s [%(levelname)-7.7s] %(message)s")
     console_logger = logging.StreamHandler(sys.stdout)
     console_logger.setLevel(loglevel)
     console_logger.setFormatter(default_format)
@@ -127,7 +129,8 @@ def get_cloudflare_nets(url: str, ssl_verify: bool, timeout: int = 2) -> list:
         verify=ssl_verify)
 
     if not response.ok:
-        raise HTTPError(f"{response.status_code}: canont get IPv4 nets from Cloudflare")
+        raise HTTPError(
+            f"{response.status_code}: canont get IPv4 nets from Cloudflare")
 
     return [r for r in response.text.split("\n") if r]
 
@@ -138,7 +141,7 @@ def Diff(list1, list2):
 
 
 def get_value(dict_: dict, path: str) -> object:
-"""get a value from a dict, key passed as dotted path (a.b.c)
+    """get a value from a dict, key passed as dotted path (a.b.c)
 
     Args:
         dict_ (dict): dict to be search
