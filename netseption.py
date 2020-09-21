@@ -32,7 +32,7 @@ def check_env_vars():
     commit_msg = os.environ.get("COMMIT_MESSAGE", "update networkrange")
     mergerequest_title = os.environ.get("MERGEREQUEST_TITLE")
 
-    loglevel = os.environ.get("LOGLEVEL", "info").lower()
+    loglevel = os.environ.get("LOGLEVEL", "info")
 
     if not file_path:
         raise EnvironmentError(
@@ -87,6 +87,8 @@ def setup_logger(loglevel='info'):
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
+    
+    loglevel = loglevel.lower()
 
     if loglevel == "critical":
         loglevel = logging.CRITICAL
@@ -109,7 +111,7 @@ def setup_logger(loglevel='info'):
     root_logger.addHandler(console_logger)
 
 
-def get_cloudflare_nets(url: str, ssl_verify: bool, timeout: int = 2) -> list:
+def get_cloudflare_ranges(url: str, ssl_verify: bool, timeout: int = 2) -> list:
     """get IPv4 range of CloudFlare
 
     Args:
@@ -130,7 +132,7 @@ def get_cloudflare_nets(url: str, ssl_verify: bool, timeout: int = 2) -> list:
 
     if not response.ok:
         raise HTTPError(
-            f"{response.status_code}: canont get IPv4 nets from Cloudflare")
+            f"{response.status_code}: canont get IPv4 ranges from Cloudflare")
 
     return [r for r in response.text.split("\n") if r]
 
@@ -194,12 +196,12 @@ def update_value(dict_: dict, path: str, value: object = None) -> dict:
     return dict_
 
 
-def process_yaml(file_path: str, yaml_path: str, cloudflare_nets: list) -> dict:
+def process_yaml(file_path: str, yaml_path: str, cloudflare_ranges: list) -> dict:
     """compare cloudflare IPv4 ranges with values of a yaml file
 
     Args:
         file_path (str): path to the yaml file
-        cloudflare_nets (list): list with CloudFlare IPv4 nets
+        cloudflare_ranges (list): list with CloudFlare IPv4 ranges
 
     Raises:
         FileNotFoundError: file not found
@@ -220,14 +222,14 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_nets: list) -> dict:
         dict_=yaml_content,
         path=yaml_path)
 
-    if not Diff(cloudflare_nets, current_nets):
+    if not Diff(cloudflare_ranges, current_nets):
         logging.info("IPv4 ranges are equal. nothing to do")
         sys.exit(0)
 
     new_content = update_value(
         dict_=yaml_content,
         path=yaml_path,
-        value=cloudflare_nets)
+        value=cloudflare_ranges)
 
     return new_content
 
@@ -341,7 +343,7 @@ def main():
         sys.exit(1)
 
     try:
-        cloudflare_nets = get_cloudflare_nets(
+        cloudflare_ranges = get_cloudflare_ranges(
             url=CLOUDFLARE_IPV4_URL,
             ssl_verify=env_vars.ssl_verify)
     except Exception as e:
@@ -352,7 +354,7 @@ def main():
         content = process_yaml(
             file_path=env_vars.file_path,
             yaml_path=env_vars.yaml_path,
-            cloudflare_nets=cloudflare_nets)
+            cloudflare_ranges=cloudflare_ranges)
         new_content = yaml.dump(content)
     except Exception as e:
         logging.critical(f"unable to process yaml. {str(e)}")
