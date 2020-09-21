@@ -405,7 +405,7 @@ def main():
     try:
         update_file(
             project=project,
-            branch_name=env_vars.branch_name,
+            branch_name=env_vars.branch_name or "master",
             commit_msg=env_vars.commit_msg,
             content=new_content,
             file_path=env_vars.file_path,
