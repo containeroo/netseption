@@ -2,7 +2,7 @@
 
 ## Introduction
 
-NetSeption syncs the IPv4 addresses from `https://www.cloudflare.com/ips-v4` with a content of a yaml. The path to the values you must provide with the variable `YAML_PATH`.  
+NetSeption updates the IPv4 addresses from `https://www.cloudflare.com/ips-v4` with the values in a yaml file. You must provide a dotted path where the key with with values is.  
 If there is a difference and the environment variable `BRANCH` is set, the script creates a branch and pushes the updated file. If no branch is set, it pushes directly to the `master` branch.
 
 ## Requirements
@@ -11,7 +11,7 @@ If there is a difference and the environment variable `BRANCH` is set, the scrip
 
 ## Configration
 
-In our [repository](https://github.com/containeroo/kubernetes-networkpolicies-examples/blob/master/traefik/networkset-cloudflare.yaml) you can find y yaml example.
+In our [repository](https://github.com/containeroo/kubernetes-networkpolicies-examples/blob/master/traefik/networkset-cloudflare.yaml) you can find a yaml example.
 
 NetSeption takes the following environment variables:
 

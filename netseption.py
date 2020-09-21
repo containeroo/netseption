@@ -14,12 +14,12 @@ import yaml
 from requests import HTTPError
 
 CLOUDFLARE_IPV_URL = "https://www.cloudflare.com/ips-v4"
-project = None
 
 __version__ = "0.0.1"
 
 def check_env_vars():
-    networkpolicy_file_path = os.environ.get("NETWORKPOLICY_FILE")
+    file_path = os.environ.get("FILE_PATH")
+    yaml_path = os.environ.get("YAML_PATH")
 
     gitlab_url = os.environ.get("GITLAB_URL")
     gitlab_token = os.environ.get("GITLAB_TOKEN")
@@ -32,9 +32,13 @@ def check_env_vars():
 
     loglevel = os.environ.get("LOGLEVEL", "info").lower()
 
-    if not networkpolicy_file_path:
+    if not file_path:
         raise EnvironmentError(
-            "environment variable 'NETWORKPOLICY_FILE' not set!")
+            "environment variable 'FILE_PATH' not set!")
+
+    if not yaml_path:
+        raise EnvironmentError(
+            "environment variable 'YAML_PATH' not set!")
 
     if not gitlab_token:
         raise EnvironmentError(
@@ -48,7 +52,8 @@ def check_env_vars():
         raise EnvironmentError(
             "environment variable 'PROJECT_ID' not set!")
 
-    Env_vars = namedtuple('Env_vars', ['networkpolicy_file_path',
+    Env_vars = namedtuple('Env_vars', ['file_path',
+                                       'yaml_path',
                                        'gitlab_token',
                                        'gitlab_url',
                                        'project_id',
@@ -60,7 +65,8 @@ def check_env_vars():
                                        ]
                           )
     return Env_vars(
-        networkpolicy_file_path,
+        file_path,
+        yaml_path,
         gitlab_token,
         gitlab_url,
         project_id,
@@ -88,6 +94,8 @@ def setup_logger(loglevel='info'):
         loglevel = logging.INFO
     elif loglevel == "debug":
         loglevel = logging.DEBUG
+    else:
+        loglevel = logging.INFO
 
     default_format = logging.Formatter("%(asctime)s [%(levelname)-7.7s] %(message)s")
     console_logger = logging.StreamHandler(sys.stdout)
@@ -96,64 +104,177 @@ def setup_logger(loglevel='info'):
     root_logger.addHandler(console_logger)
 
 
-def get_cloudflare_ips(url, ssl_verify):
+def get_cloudflare_nets(url: str, ssl_verify: bool, timeout: int = 2) -> list:
+    """get IPv4 range of CloudFlare
+
+    Args:
+        url (str): CloudFlare URL to fetch IP ranges
+        ssl_verify (bool): verify cert
+        timeout (int, optional): connection timeout. Defaults to 2.
+
+    Raises:
+        HTTPError: CloudFlare response is not ok
+
+    Returns:
+        [type]: list with CloudFlare IPv4 ranges
+    """
     response = requests.get(
         url=url,
-        timeout=2,
+        timeout=timeout,
         verify=ssl_verify)
 
     if not response.ok:
-        raise HTTPError(f"{response.status_code}: canont get IPv4 address from Cloudflare")
+        raise HTTPError(f"{response.status_code}: canont get IPv4 nets from Cloudflare")
 
     return [r for r in response.text.split("\n") if r]
 
 
+def Diff(list1, list2):
+    """compare two lists"""
+    return (list(list(set(list1)-set(list2)) + list(set(list2)-set(list1))))
 
-def process_networkpolicy(networkpolicy_file_path, cloudflare_ips):
-    if not os.path.exists(networkpolicy_file_path):
-        raise FileNotFoundError(f"cannot open file '{networkpolicy_file_path}'. {e}")
+
+def get_value(dict_: dict, path: str) -> object:
+    """get a value from a dict, key passed as dotted path (a.b.c)
+
+    Args:
+        dict_ (dict): dict to be search
+        path (str): path with keys, separated with a dot (a.b.c)
+
+    Raises:
+        TypeError: dict_ object is not a dict
+
+    Returns:
+        object: value from key
+    """
+    if not isinstance(dict_, dict):
+        raise TypeError("you must pass a dict")
+
+    keys = path.split('.', 1)
+    key = keys[0]
+    value = dict_.get(key)
+    if not value:
+        return None
+    if len(keys) > 1:
+        path = keys[1]
+        return get_value(dict_[key], path)
+    return value
+
+
+def update_value(dict_: dict, path: str, value: object) -> dict:
+    """update a value from a dict, key passed as dotted path (a.b.c)
+
+    Args:
+        dict_ (dict): dict to be updated
+        path (str): path with keys, separated with a dot (a.b.c)
+        value (object): any object you want to put as new value
+
+    Raises:
+        TypeError: dict_ object is not a dict
+
+    Returns:
+        dict: updated dict
+    """
+    if not isinstance(dict_, dict):
+        raise TypeError("you must pass a dict")
+
+    keys = path.split('.', 1)
+    key = keys[0]
+    if len(keys) > 1:
+        path = keys[1]
+        update_value(dict_[key], path, value)
+    else:
+        dict_[key] = value
+    return dict_
+
+
+def process_yaml(file_path: str, yaml_path: str, cloudflare_nets: list) -> dict:
+    """compare cloudflare IPv4 ranges with values of a yaml file
+
+    Args:
+        file_path (str): path to the yaml file
+        cloudflare_nets (list): list with CloudFlare IPv4 nets
+
+    Raises:
+        FileNotFoundError: file not found
+        ValueError: cannot open yaml
+    Returns:
+        dict: yaml file with updated cloudflare IPv4 ranges
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"cannot open file '{file_path}'")
 
     try:
-        with open(networkpolicy_file_path, 'r') as conf:
-            networkpolicy = yaml.safe_load(conf)
+        with open(file_path, 'r') as conf:
+            yaml_content = yaml.safe_load(conf)
     except Exception as e:
-        raise Exception(f"dannot open file '{networkpolicy_file_path}'. {e}")
+        raise ValueError(f"cannot open file '{file_path}'. {e}")
 
-    if not networkpolicy.get('spec'):
-        raise KeyError(f"'spec' not found in '{networkpolicy_file_path}'")
+    nets = get_value(
+        dict_=yaml_content,
+        path=yaml_path)
 
-    networkpolicy_ips = networkpolicy['spec'].get('nets')
-    if not networkpolicy_ips:
-        raise KeyError(f"'nets' not found in '{networkpolicy_file_path}'")
-
-    if not Diff(cloudflare_ips, networkpolicy_ips):
-        logging.info("IPv4 addresses are equal. nothing to do")
+    if not Diff(cloudflare_nets, nets):
+        logging.info("IPv4 nets are equal. nothing to do")
         sys.exit(0)
 
-    networkpolicy['spec']['nets'] = cloudflare_ips  # update networkpolicy
+    new_content = update_value(
+        dict_=yaml_content,
+        path=yaml_path,
+        value=cloudflare_nets)
 
-    return networkpolicy
+    return new_content
 
 
-def update_file(branch_name, commit_msg, networkpolicy, networkpolicy_file_path):
-    content = yaml.dump(networkpolicy)
+def update_file(project: object,
+                commit_msg: str,
+                content: str,
+                file_path: str,
+                branch_name: str = 'master'):
+    """update file on a gitlab project
+
+    Args:
+        project (gitlab.v4.objects.Project): gitlab project object
+        commit_msg (str): commit message
+        content (str): file content as string
+        file_path (str): path to file on the gitlab project
+        branch_name (str, optional): [description]. Defaults to 'master'.
+
+    Raises:
+        TypeError: project variable is not a type 'gitlab.v4.objects.Project'
+    """
+    if not isinstance(project, gitlab.v4.objects.Project):
+        raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
+
     payload = {
         "branch": branch_name,
         "commit_message": commit_msg,
         "actions": [
             {
                 'action': 'update',
-                'file_path': networkpolicy_file_path,
+                'file_path': file_path,
                 'content': content,
             }
         ]
     }
 
     project.commits.create(payload)
-    logging.info(f"successfully update file '{networkpolicy_file_path}'")
+    logging.info(f"successfully update file '{file_path}'")
 
 
-def create_branch(branch_name):
+def create_branch(project: object, branch_name: str = 'master'):
+    """create a branch on gitlab
+
+    Args:
+        project (gitlab.v4.objects.Project): gitlab project object
+        branch_name (str, optional): [description]. Defaults to 'master'.
+
+    Raises:
+        TypeError: project variable is not a type 'gitlab.v4.objects.Project'
+    """
+    if not isinstance(project, gitlab.v4.objects.Project):
+        raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
+
     branch = project.branches.get("branch_name")
     if branch:
         logging.debug(f"branch '{branch_name}' already exists")
@@ -167,7 +288,20 @@ def create_branch(branch_name):
     logging.info(f"successfully created branch '{branch_name}'")
 
 
-def create_merge_request(branch_name, title):
+def create_merge_request(project: object, title: str, branch_name: str = 'master'):
+    """create merge request on gitlab
+
+    Args:
+        project (gitlab.v4.objects.Project): gitlab project object
+        title (str): title of branch
+        branch_name (str, optional): [description]. Defaults to 'master'.
+
+    Raises:
+        TypeError: project variable is not a type 'gitlab.v4.objects.Project'
+    """
+    if not isinstance(project, gitlab.v4.objects.Project):
+        raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
+
     mrs = project.mergerequests.list(
         state='opened',
         order_by='updated_at')
@@ -201,7 +335,7 @@ def main():
         sys.exit(1)
 
     try:
-        cloudflare_ips = get_cloudflare_ips(
+        cloudflare_nets = get_cloudflare_nets(
             url=CLOUDFLARE_IPV_URL,
             ssl_verify=env_vars.ssl_verify)
     except Exception as e:
@@ -209,11 +343,14 @@ def main():
         sys.exit(1)
 
     try:
-        networkpolicy = process_networkpolicy(
-            networkpolicy_file_path=env_vars.networkpolicy_file_path,
-            cloudflare_ips=cloudflare_ips)
+        content = process_yaml(
+            file_path=env_vars.file_path,
+            yaml_path=env_vars.yaml_path,
+            cloudflare_nets=cloudflare_nets)
+        new_content = yaml.dump(content)
+
     except Exception as e:
-        logging.critical(f"unable to process networkpolicy yaml. {str(e)}")
+        logging.critical(f"unable to process yaml. {str(e)}")
         sys.exit(1)
 
     try:
@@ -226,7 +363,6 @@ def main():
         sys.exit(1)
 
     try:
-        global project
         project = cli.projects.get(int(env_vars.project_id))
     except gitlab.exceptions.GitlabGetError:
         logging.critical(f"project '{env_vars.project_id}' not found")
@@ -235,14 +371,14 @@ def main():
         logging.critical(f"unable to connect to gitlab. {str(e)}")
         sys.exit(1)
 
-    filename = Path(env_vars.networkpolicy_file_path).name
+    filename = Path(env_vars.file_path).name
 
     if not env_vars.branch_name:
         logging.debug("no branch set. push direct to master")
-
     else:
         try:
             create_branch(
+                project=project,
                 branch_name=env_vars.branch_name
             )
         except Exception as e:
@@ -251,8 +387,9 @@ def main():
 
         try:
             create_merge_request(
+                project=project,
                 branch_name=env_vars.branch_name,
-                title=env_vars.mergerequest_title or f"{filename}: update networkrange"
+                title=env_vars.mergerequest_title or f"{filename}: update networkranges"
             )
         except Exception as e:
             logging.critical(f"unable to create merge request. {str(e)}")
@@ -260,18 +397,15 @@ def main():
 
     try:
         update_file(
-            branch_name=env_vars.branch_name or 'master',
+            project=project,
+            branch_name=env_vars.branch_name,
             commit_msg=env_vars.commit_msg,
-            networkpolicy=networkpolicy,
-            networkpolicy_file_path=env_vars.networkpolicy_file_path,
+            content=new_content,
+            file_path=env_vars.file_path,
         )
     except Exception as e:
         logging.critical(f"unable to upload file. {str(e)}")
         sys.exit(1)
-
-
-def Diff(list1, list2):
-    return (list(list(set(list1)-set(list2)) + list(set(list2)-set(list1))))
 
 
 if __name__ == "__main__":
