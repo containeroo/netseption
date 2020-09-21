@@ -19,14 +19,14 @@ NetSeption takes the following environment variables:
 | Variable             | Description                                                       | Example                                                |
 | :------------------- | :---------------------------------------------------------------- | :----------------------------------------------------- |
 | `PATH_TO_FILE`       | path to yaml file                                                 | `networkpolicies/cloudflare-networkset.yaml`           |
-| `KEY_PATH`           | dotted path to where the network range value is                   | `spec.nets`                                            |
+| `KEY_PATH`           | dotted path to the network range key in yaml file               | `spec.nets`                                            |
 | `GITLAB_TOKEN`       | token for authentication                                          | `vTbFeqJYCY3sibBP7BZM`                                 |
 | `GITLAB_URL`         | gitlab url                                                        | `https://gitlab.example.com`                           |
 | `PROJECT_ID`         | id of project                                                     | `123`                                                  |
 | `BRANCH`             | branch (if not set push direct to `master` branch)                | `cloudflare/IPv4`                                      |
 | `COMMIT_MESSAGE`     | commit message (default: `update networkrange`)                   | `update networkrange`                                  |
 | `MERGEREQUEST_TITLE` | merge request title (default: `filename: update networkrequest `) | `networkset-cloudflare.yaml: update networkrange`      |
-| `SSL_VERIFY`         | verify SSL cert (default: `true`)                                 | `true`                                                 |
+| `SSL_VERIFY`         | verify SSL certificates (default: `true`)                                 | `true`                                                 |
 | `LOGLEVEL`           | Set loglevel (default: `info`)                                    | one of `critical`, `error`, `warning`, `info`, `debug` |
 
 ### GitLab
