@@ -20,8 +20,8 @@ __version__ = "0.0.1"
 
 def check_env_vars():
     """get variables from env"""
-    file_path = os.environ.get("FILE_PATH")
-    yaml_path = os.environ.get("YAML_PATH")
+    path_to_file = os.environ.get("PATH_TO_FILE")
+    key_path = os.environ.get("KEY_PATH")
 
     gitlab_url = os.environ.get("GITLAB_URL")
     gitlab_token = os.environ.get("GITLAB_TOKEN")
@@ -34,13 +34,13 @@ def check_env_vars():
 
     loglevel = os.environ.get("LOGLEVEL", "info")
 
-    if not file_path:
+    if not path_to_file:
         raise EnvironmentError(
-            "environment variable 'FILE_PATH' not set!")
+            "environment variable 'PATH_TO_FILE' not set!")
 
-    if not yaml_path:
+    if not key_path:
         raise EnvironmentError(
-            "environment variable 'YAML_PATH' not set!")
+            "environment variable 'KEY_PATH' not set!")
 
     if not gitlab_token:
         raise EnvironmentError(
@@ -54,8 +54,8 @@ def check_env_vars():
         raise EnvironmentError(
             "environment variable 'PROJECT_ID' not set!")
 
-    Env_vars = namedtuple('Env_vars', ['file_path',
-                                       'yaml_path',
+    Env_vars = namedtuple('Env_vars', ['path_to_file',
+                                       'key_path',
                                        'gitlab_token',
                                        'gitlab_url',
                                        'project_id',
@@ -67,8 +67,8 @@ def check_env_vars():
                                        ]
                           )
     return Env_vars(
-        file_path,
-        yaml_path,
+        path_to_file,
+        key_path,
         gitlab_token,
         gitlab_url,
         project_id,
@@ -196,11 +196,11 @@ def update_value(dict_: dict, path: str, value: object = None) -> dict:
     return dict_
 
 
-def process_yaml(file_path: str, yaml_path: str, cloudflare_ranges: list) -> dict:
+def process_yaml(path_to_file: str, key_path: str, cloudflare_ranges: list) -> dict:
     """compare cloudflare IPv4 ranges with values of a yaml file
 
     Args:
-        file_path (str): path to the yaml file
+        path_to_file (str): path to the yaml file
         cloudflare_ranges (list): list with CloudFlare IPv4 ranges
 
     Raises:
@@ -209,18 +209,18 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_ranges: list) -> dic
     Returns:
         dict: yaml file with updated cloudflare IPv4 ranges
     """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"cannot open file '{file_path}'")
+    if not os.path.exists(path_to_file):
+        raise FileNotFoundError(f"cannot open file '{path_to_file}'")
 
     try:
-        with open(file_path, 'r') as data:
+        with open(path_to_file, 'r') as data:
             yaml_content = yaml.safe_load(data)
     except Exception as e:
-        raise ValueError(f"cannot open file '{file_path}'. {e}")
+        raise ValueError(f"cannot open file '{path_to_file}'. {e}")
 
     current_nets = get_value(
         dict_=yaml_content,
-        path=yaml_path)
+        path=key_path)
 
     if not Diff(cloudflare_ranges, current_nets):
         logging.info("IPv4 ranges are equal. nothing to do")
@@ -228,7 +228,7 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_ranges: list) -> dic
 
     new_content = update_value(
         dict_=yaml_content,
-        path=yaml_path,
+        path=key_path,
         value=cloudflare_ranges)
 
     return new_content
@@ -237,7 +237,7 @@ def process_yaml(file_path: str, yaml_path: str, cloudflare_ranges: list) -> dic
 def update_file(project: object,
                 commit_msg: str,
                 content: str,
-                file_path: str,
+                path_to_file: str,
                 branch_name: str = 'master'):
     """update file on a gitlab project
 
@@ -245,7 +245,7 @@ def update_file(project: object,
         project (gitlab.v4.objects.Project): gitlab project object
         commit_msg (str): commit message
         content (str): file content as string
-        file_path (str): path to file on the gitlab project
+        path_to_file (str): path to file on the gitlab project
         branch_name (str, optional): [description]. Defaults to 'master'.
 
     Raises:
@@ -260,14 +260,14 @@ def update_file(project: object,
         "actions": [
             {
                 'action': 'update',
-                'file_path': file_path,
+                'file_path': path_to_file,
                 'content': content,
             }
         ]
     }
 
     project.commits.create(payload)
-    logging.info(f"successfully update file '{file_path}'")
+    logging.info(f"successfully update file '{path_to_file}'")
 
 
 def create_branch(project: object, branch_name: str = 'master'):
@@ -352,8 +352,8 @@ def main():
 
     try:
         content = process_yaml(
-            file_path=env_vars.file_path,
-            yaml_path=env_vars.yaml_path,
+            path_to_file=env_vars.path_to_file,
+            key_path=env_vars.key_path,
             cloudflare_ranges=cloudflare_ranges)
         new_content = yaml.dump(content)
     except Exception as e:
@@ -378,7 +378,7 @@ def main():
         logging.critical(f"unable to connect to gitlab. {str(e)}")
         sys.exit(1)
 
-    filename = Path(env_vars.file_path).name
+    filename = Path(env_vars.path_to_file).name
 
     if not env_vars.branch_name:
         logging.debug("no branch set. push direct to master")
@@ -408,7 +408,7 @@ def main():
             branch_name=env_vars.branch_name or "master",
             commit_msg=env_vars.commit_msg,
             content=new_content,
-            file_path=env_vars.file_path,
+            path_to_file=env_vars.path_to_file,
         )
     except Exception as e:
         logging.critical(f"unable to upload file. {str(e)}")

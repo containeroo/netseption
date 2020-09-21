@@ -18,8 +18,8 @@ NetSeption takes the following environment variables:
 
 | Variable             | Description                                                       | Example                                                |
 | :------------------- | :---------------------------------------------------------------- | :----------------------------------------------------- |
-| `FILE_FILE`          | path to networkset file                                           | `networkpolicies/cloudflare-networkset.yaml`           |
-| `YAML_PATH`          | path to get network values                                        | `spec.nets`                                            |
+| `PATH_TO_FILE`       | path to yaml file                                                 | `networkpolicies/cloudflare-networkset.yaml`           |
+| `KEY_PATH`           | dotted path to where the network range value is                   | `spec.nets`                                            |
 | `GITLAB_TOKEN`       | token for authentication                                          | `vTbFeqJYCY3sibBP7BZM`                                 |
 | `GITLAB_URL`         | gitlab url                                                        | `https://gitlab.example.com`                           |
 | `PROJECT_ID`         | id of project                                                     | `123`                                                  |
