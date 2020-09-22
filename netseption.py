@@ -28,6 +28,7 @@ def check_env_vars():
     gitlab_token = os.environ.get("GITLAB_TOKEN")
     project_id = os.environ.get("PROJECT_ID")
     branch_name = os.environ.get("BRANCH")
+    assignee = os.environ.get("ASSIGNEE")
     ssl_verify = os.environ.get("SSL_VERIFY", "true") == "true"
 
     commit_msg = os.environ.get("COMMIT_MESSAGE", "update networkrange")
@@ -61,6 +62,7 @@ def check_env_vars():
                                        'gitlab_url',
                                        'project_id',
                                        'branch_name',
+                                       'assignee',
                                        'commit_msg',
                                        'mergerequest_title',
                                        'loglevel',
@@ -74,6 +76,7 @@ def check_env_vars():
         gitlab_url,
         project_id,
         branch_name,
+        assignee,
         commit_msg,
         mergerequest_title,
         loglevel,
@@ -311,18 +314,19 @@ def create_branch(project: object, branch_name: str = 'master'):
     project.branches.create(
         {
             'branch': branch_name,
-            'ref': 'master'
+            'ref': 'master',
         })
     logging.info(f"successfully created branch '{branch_name}'")
 
 
-def create_merge_request(project: object, title: str, branch_name: str = 'master'):
+def create_merge_request(project: object, title: str, branch_name: str = 'master', assignee: int = None):
     """create merge request on gitlab
 
     Args:
         project (gitlab.v4.objects.Project): gitlab project object
         title (str): title of branch
-        branch_name (str, optional): [description]. Defaults to 'master'.
+        branch_name (str, optional): name of branch. Defaults to 'master'.
+        assignee (str, optional): assin merge request to person. Defaults to 'None'.
 
     Raises:
         TypeError: project variable is not of type 'gitlab.v4.objects.Project'
@@ -346,7 +350,11 @@ def create_merge_request(project: object, title: str, branch_name: str = 'master
             'target_branch': 'master',
             'title': title,
         })
-    mr.todo()
+    if assignee:
+        mr.todo()
+        mr.assignee_ids = [assignee]
+        mr.save()
+
     logging.info(f"successfully created merge request '{title}'")
 
 
@@ -414,10 +422,26 @@ def main():
             sys.exit(1)
 
         try:
+            if env_vars.assignee:
+                try:
+                    assignee = cli.users.list(search=env_vars.assignee)
+                    if len(assignee) > 1:
+                       assignee = None
+                       logging.error(f"cannot assign merge request to user '{{env_vars.assignee}}'. to many users found {assignee}")
+                    elif not assignee:
+                        assignee = None
+                        logging.error(f"cannot assign merge request to user '{{env_vars.assignee}}'. no user found {assignee}")
+                    else:
+                        assignee = assignee[0].id
+                except Exception as e:
+                    assignee = None
+                    logging.error(f"cannot get id of assignee '{env_vars.assignee}'. {e}")
+
             create_merge_request(
                 project=project,
                 branch_name=env_vars.branch_name,
-                title=env_vars.mergerequest_title or f"{filename}: update networkranges"
+                title=env_vars.mergerequest_title or f"{filename}: update networkranges",
+                assignee=assignee
             )
         except Exception as e:
             logging.critical(f"unable to create merge request. {str(e)}")
