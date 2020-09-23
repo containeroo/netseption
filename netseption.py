@@ -115,7 +115,9 @@ def setup_logger(loglevel='info'):
     root_logger.addHandler(console_logger)
 
 
-def get_cloudflare_ranges(url: str, ssl_verify: bool, timeout: int = 2) -> list:
+def get_cloudflare_ranges(url: str,
+                          ssl_verify: bool,
+                          timeout: int = 2) -> list:
     """get IPv4 range of CloudFlare
 
     Args:
@@ -141,12 +143,13 @@ def get_cloudflare_ranges(url: str, ssl_verify: bool, timeout: int = 2) -> list:
     return [r for r in response.text.split("\n") if r]
 
 
-def Diff(list1, list2):
+def Diff(list1: list, list2: list):
     """compare two lists"""
     return (list(list(set(list1)-set(list2)) + list(set(list2)-set(list1))))
 
 
-def get_value(dict_: dict, path: str) -> object:
+def get_value(dict_: dict,
+              path: str) -> object:
     """get a value from a dict, key passed as dotted path (a.b.c)
 
     Args:
@@ -173,7 +176,9 @@ def get_value(dict_: dict, path: str) -> object:
     return value
 
 
-def update_value(dict_: dict, path: str, value: object = None) -> dict:
+def update_value(dict_: dict,
+                 path: str,
+                 value: object = None) -> dict:
     """update a value from a dict, key passed as dotted path (a.b.c)
 
     Args:
@@ -200,7 +205,9 @@ def update_value(dict_: dict, path: str, value: object = None) -> dict:
     return dict_
 
 
-def process_yaml(path_to_file: str, key_path: str, cloudflare_ranges: list) -> dict:
+def process_yaml(path_to_file: str,
+                 key_path: str,
+                 cloudflare_ranges: list) -> dict:
     """compare cloudflare IPv4 ranges with values of a yaml file
 
     Args:
@@ -287,7 +294,8 @@ def update_file(project: object,
     logging.info(f"successfully update file '{path_to_file}'")
 
 
-def create_branch(project: object, branch_name: str = 'master'):
+def create_branch(project: object,
+                  branch_name: str = 'master'):
     """create a branch on gitlab
 
     Args:
@@ -319,14 +327,17 @@ def create_branch(project: object, branch_name: str = 'master'):
     logging.info(f"successfully created branch '{branch_name}'")
 
 
-def create_merge_request(project: object, title: str, branch_name: str = 'master', assignee: int = None):
+def create_merge_request(project: object,
+                         title: str,
+                         branch_name: str = 'master',
+                         assignee_id: int = None):
     """create merge request on gitlab
 
     Args:
         project (gitlab.v4.objects.Project): gitlab project object
         title (str): title of branch
         branch_name (str, optional): name of branch. Defaults to 'master'.
-        assignee (str, optional): assin merge request to person. Defaults to 'None'.
+        assignee_id (int, optional): assign merge request to person. Defaults to 'None'.
 
     Raises:
         TypeError: project variable is not of type 'gitlab.v4.objects.Project'
@@ -350,9 +361,9 @@ def create_merge_request(project: object, title: str, branch_name: str = 'master
             'target_branch': 'master',
             'title': title,
         })
-    if assignee:
+    if assignee_id:
         mr.todo()
-        mr.assignee_ids = [assignee]
+        mr.assignee_ids = [int(assignee_id)]
         mr.save()
 
     logging.info(f"successfully created merge request '{title}'")
