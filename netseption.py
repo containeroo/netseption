@@ -116,13 +116,13 @@ def setup_logger(loglevel='info'):
 
 
 def get_cloudflare_ranges(url: str,
-                          ssl_verify: bool,
+                          ssl_verify: bool = True,
                           timeout: int = 2) -> list:
     """get IPv4 range of CloudFlare
 
     Args:
         url (str): CloudFlare URL to fetch IP ranges
-        ssl_verify (bool): verify cert
+        ssl_verify (bool, optional): verify ssl cert. Defaults to True.
         timeout (int, optional): connection timeout. Defaults to 2.
 
     Raises:
@@ -218,7 +218,7 @@ def process_yaml(path_to_file: str,
         FileNotFoundError: file not found
         ValueError: cannot open yaml
     Returns:
-        dict: yaml file with updated cloudflare IPv4 ranges
+        dict: yaml file content with updated cloudflare IPv4 ranges
     """
     if not os.path.exists(path_to_file):
         raise FileNotFoundError(f"cannot open file '{path_to_file}'")
@@ -308,16 +308,14 @@ def create_branch(project: object,
     if not isinstance(project, gitlab.v4.objects.Project):
         raise TypeError("you must pass an 'gitlab.v4.objects.Project' object!")
 
-    branch = None
     try:
-        branch = project.branches.get(branch_name)
+        project.branches.get(branch_name)
+        logging.debug(f"branch '{branch_name}' already exists")
+        return
     except gitlab.exceptions.GitlabGetError:
         logging.debug(f"branch '{branch_name}' not found")
     except:
         raise
-    if branch:
-        logging.debug(f"branch '{branch_name}' already exists")
-        return
 
     project.branches.create(
         {
@@ -331,7 +329,7 @@ def create_merge_request(project: object,
                          title: str,
                          branch_name: str = 'master',
                          assignee_id: int = None):
-    """create merge request on gitlab
+    """create merge request on a gitlab project
 
     Args:
         project (gitlab.v4.objects.Project): gitlab project object
