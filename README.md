@@ -22,7 +22,7 @@ NetSeption takes the following environment variables:
 | `KEY_PATH`           | dotted path to the network range key in yaml file                 | `spec.nets`                                            |
 | `GITLAB_TOKEN`       | token for authentication                                          | `vTbFeqJYCY3sibBP7BZM`                                 |
 | `GITLAB_URL`         | gitlab url                                                        | `https://gitlab.example.com`                           |
-| `ASSIGNEE`           | assignee for merge request                                        |
+| `ASSIGNEES`          | assignees for merge request. list of users, separated by comma    | `alice,bob`                                            |
 | `PROJECT_ID`         | id of project                                                     | `123`                                                  |
 | `BRANCH`             | branch (if not set push direct to `master` branch)                | `cloudflare/IPv4`                                      |
 | `COMMIT_MESSAGE`     | commit message (default: `update networkrange`)                   | `update networkrange`                                  |
