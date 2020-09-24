@@ -37,24 +37,19 @@ def check_env_vars():
     loglevel = os.environ.get("LOGLEVEL", "info")
 
     if not path_to_file:
-        raise EnvironmentError(
-            "environment variable 'PATH_TO_FILE' not set!")
+        raise EnvironmentError("environment variable 'PATH_TO_FILE' not set!")
 
     if not key_path:
-        raise EnvironmentError(
-            "environment variable 'KEY_PATH' not set!")
+        raise EnvironmentError("environment variable 'KEY_PATH' not set!")
 
     if not gitlab_token:
-        raise EnvironmentError(
-            "environment variable 'GITLAB_TOKEN' not set!")
+        raise EnvironmentError("environment variable 'GITLAB_TOKEN' not set!")
 
     if not gitlab_url:
-        raise EnvironmentError(
-            "environment variable 'GITLAB_URL' not set!")
+        raise EnvironmentError("environment variable 'GITLAB_URL' not set!")
 
     if not project_id:
-        raise EnvironmentError(
-            "environment variable 'PROJECT_ID' not set!")
+        raise EnvironmentError("environment variable 'PROJECT_ID' not set!")
 
     Env_vars = namedtuple('Env_vars', ['path_to_file',
                                        'key_path',
@@ -435,22 +430,28 @@ def main():
                 try:
                     assignee = cli.users.list(search=env_vars.assignee)
                     if len(assignee) > 1:
-                       assignee = None
-                       logging.error(f"cannot assign merge request to user '{{env_vars.assignee}}'. to many users found {assignee}")
+                        assignee = None
+                        logging.error("cannot assign merge request to user "
+                                      f"'{{env_vars.assignee}}'. "
+                                      f"to many users found {assignee}")
                     elif not assignee:
                         assignee = None
-                        logging.error(f"cannot assign merge request to user '{{env_vars.assignee}}'. no user found {assignee}")
+                        logging.error("cannot assign merge request to user "
+                                      f"'{{env_vars.assignee}}'. "
+                                      f"no user found {assignee}")
                     else:
                         assignee = assignee[0].id
                 except Exception as e:
                     assignee = None
-                    logging.error(f"cannot get id of assignee '{env_vars.assignee}'. {e}")
+                    logging.error("cannot get id of assignee "
+                                  f"'{env_vars.assignee}'. {e}")
 
             create_merge_request(
                 project=project,
                 branch_name=env_vars.branch_name,
-                title=env_vars.mergerequest_title or f"{filename}: update networkranges",
-                assignee=assignee
+                title=(env_vars.mergerequest_title or
+                       f"{filename}: update networkranges"),
+                assignee_id=assignee
             )
         except Exception as e:
             logging.critical(f"unable to create merge request. {str(e)}")
