@@ -147,61 +147,73 @@ def Diff(list1: list, list2: list):
     return (list(list(set(list1)-set(list2)) + list(set(list2)-set(list1))))
 
 
-def get_value(dict_: dict,
-              path: str) -> object:
-    """get a value from a dict, key passed as dotted path (a.b.c)
+def get_value(dictionary: dict,
+              path: str,
+              delimiter: str = ".") -> object:
+    """get a value from a dict. path to key can be passed by a string, separated by a delimiter
 
     Args:
-        dict_ (dict): dict to be search
-        path (str): path with keys, separated with a dot (a.b.c)
+        dictionary (dict): dict to be search
+        path (str): path with keys, separated by delimiter
+        delimiter (str, optional): delimiter for path. Defaults to ".".
 
     Raises:
-        TypeError: dict_ object is not a dict
+        TypeError: dictionary object is not a dict
+        KeyError: key from path not found
 
     Returns:
         object: value from key
     """
-    if not isinstance(dict_, dict):
-        raise TypeError("you must pass a dict")
+    if not isinstance(dictionary, dict):
+        raise TypeError(f"you must pass a dict. You pass {type(dictionary)}")
 
-    keys = path.split('.', 1)
-    key = keys[0]
-    value = dict_.get(key)
-    if not value:
-        return None
-    if len(keys) > 1:
-        path = keys[1]
-        return get_value(dict_[key], path)
-    return value
+    keys = path.split(delimiter)
+    for key in keys:
+        if not isinstance(dictionary, dict):
+            raise KeyError(f"key '{key}' not found")
+        dictionary = dictionary.get(key)
+        if not dictionary:
+            raise KeyError(f"key '{key}' not found")
 
+    return dictionary
 
-def update_value(dict_: dict,
+def update_value(dictionary: dict,
                  path: str,
-                 value: object = None) -> dict:
-    """update a value from a dict, key passed as dotted path (a.b.c)
+                 value: object,
+                 delimiter: str = ".") -> dict:
+    """update a value from a dict. path to key can be passed by a string, separated by a delimiter
 
     Args:
-        dict_ (dict): dict to be updated
-        path (str): path with keys, separated with a dot (a.b.c)
-        value (object, optional): value to set. Defaults to None.
+        dictionary (dict): dict to be updated
+        path (str): path with keys, separated by delimiter
+        value (object): value to update.
+        delimiter (str, optional): delimiter for path. Defaults to ".".
 
     Raises:
-        TypeError: dict_ object is not a dict
+        TypeError: dictionary object is not a dict
+        KeyError: key from path not found
 
     Returns:
-        dict: updated dict
+        dict: updated dictionary with new value
     """
-    if not isinstance(dict_, dict):
-        raise TypeError("you must pass a dict")
+    if not isinstance(dictionary, dict):
+        raise TypeError(f"you must pass a dict. You pass {type(dictionary)}")
 
-    keys = path.split('.', 1)
+    keys = path.split(delimiter)
     key = keys[0]
+    if not dictionary.get(key):
+        raise KeyError(f"key '{key}' not found")
     if len(keys) > 1:
-        path = keys[1]
-        update_value(dict_[key], path, value)
+        path = delimiter.join(keys[1:])
+        update_value(
+            dictionary=dictionary[key],
+            path=path,
+            value=value,
+            delimiter=delimiter
+        )
     else:
-        dict_[key] = value
-    return dict_
+        dictionary[key] = value
+    return dictionary
 
 
 def process_yaml(path_to_file: str,
@@ -229,7 +241,7 @@ def process_yaml(path_to_file: str,
         raise ValueError(f"cannot open file '{path_to_file}'. {e}")
 
     current_nets = get_value(
-        dict_=yaml_content,
+        dictionary=yaml_content,
         path=key_path)
 
     if not Diff(cloudflare_ranges, current_nets):
@@ -237,7 +249,7 @@ def process_yaml(path_to_file: str,
         sys.exit(0)
 
     new_content = update_value(
-        dict_=yaml_content,
+        dictionary=yaml_content,
         path=key_path,
         value=cloudflare_ranges)
 
