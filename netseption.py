@@ -7,6 +7,7 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 from urllib.parse import quote
+
 import urllib3
 
 try:
@@ -112,9 +113,13 @@ def setup_logger(loglevel='info'):
 
     default_format = logging.Formatter(
         "%(asctime)s [%(levelname)-7.7s] %(message)s")
+    debug_format = logging.Formatter(
+        "%(asctime)s [%(filename)s:%(lineno)s - %(funcName)-20s ] %(message)s")
+
     console_logger = logging.StreamHandler(sys.stdout)
     console_logger.setLevel(loglevel)
-    console_logger.setFormatter(default_format)
+    console_logger.setFormatter(
+        debug_format if loglevel == logging.DEBUG else default_format)
     root_logger.addHandler(console_logger)
 
 
