@@ -7,12 +7,16 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 from urllib.parse import quote
-
-import gitlab
-import requests
 import urllib3
-import yaml
-from requests import HTTPError
+
+try:
+    import gitlab
+    import requests
+    import yaml
+    from requests import HTTPError
+except:
+    sys.stderr.write("requirements are not satisfied! see 'requirements.txt'\n")
+    sys.exit(1)
 
 CLOUDFLARE_IPV4_URL = "https://www.cloudflare.com/ips-v4"
 
