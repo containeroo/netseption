@@ -49,7 +49,7 @@ netseption:
   script: python /app/netseption.py
 ```
 
-In order to set the configration environment variables, go to your project (repository) containing the calico networkset. 
+In order to set the configration environment variables, go to your project (repository) containing the networkset.
 Go to `Settings` -> `CI / CD` -> `Variabels` -> `Expand`.
 
 After you have set all variables you can create a pipeline schedule. This ensures your job runs regularly.
